@@ -24,12 +24,15 @@ jobs:
       - name: Setup PHP and Composer
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'  # or your PHP version
+          php-version: '8.1'  # Adjust to your PHP version
           tools: composer
 
-      - name: Install Psalm and Security Plugin
+      - name: Install Psalm v5
         run: |
-          composer require --dev vimeo/psalm psalm/plugin-security-analysis
+          composer require --dev vimeo/psalm:^5.0
+
+      - name: Enable Psalm Security Plugin
+        run: |
           ./vendor/bin/psalm-plugin enable psalm/plugin-security-analysis
 
       - name: Run Psalm with Taint Analysis
