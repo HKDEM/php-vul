@@ -21,17 +21,18 @@ jobs:
 
       - name: Run Semgrep Scan (PHP + Secrets + Audit)
         run: |
-          semgrep \
+          semgrep --metrics=off \
             --config=p/php \
             --config=p/oss-secrets \
             --config=p/security-audit \
             --sarif --output=semgrep-results.sarif
           
-          semgrep \
+          semgrep --metrics=off \
             --config=p/php \
             --config=p/oss-secrets \
             --config=p/security-audit \
             --json --output=semgrep-results.json
+
 
       - name: Upload SARIF results (for GitHub Code Scanning)
         uses: github/codeql-action/upload-sarif@v3
