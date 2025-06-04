@@ -1,4 +1,4 @@
-name: Psalm Security Scan
+name: Psalm Security Analysis
 
 on:
   push:
@@ -8,42 +8,58 @@ on:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
-  php-security:
+  php-security-scan:
+    name: Psalm Security Scan
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup PHP and Composer
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
-          tools: composer
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
 
       - name: Install Psalm
-        run: |
-          composer require --dev vimeo/psalm:^5.0
+        run: composer require --dev vimeo/psalm:^5.0 --no-progress
 
       - name: Run Psalm with Taint Analysis
         run: |
-          ./vendor/bin/psalm --taint-analysis --no-progress --show-info=false --output-format=sarif > psalm-results.sarif || true
+          ./vendor/bin/psalm --taint-analysis --no-progress --show-info=false --output-format=sarif --output=psalm-results.sarif
+          # Exit code 0 - no errors found
+          # Exit code 1 - errors found
+          # Exit code 2 - config/other issues
+          # We want to proceed with SARIF upload even if errors found (exit code 1)
+          if [ $? -eq 2 ]; then exit 1; fi
 
-      - name: Upload Psalm SARIF results
+      - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: psalm-results.sarif
+          checkout_path: ${{ github.workspace }}
 
-
-      - name: Upload Psalm JSON results
+      - name: Upload full report as artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: psalm-json-report
-          path: psalm-results.json
-          if-no-files-found: ignore
+          name: psalm-security-report
+          path: psalm-results.sarif
+          retention-days: 7
