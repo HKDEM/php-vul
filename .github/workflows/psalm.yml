@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '16 22 * * 1'  # Weekly on Monday at 22:16 UTC
+    - cron: '16 22 * * 1'
 
 permissions:
   contents: read
@@ -30,17 +30,18 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
-      - name: Normalize File Encoding (ensure UTF-8)
+      - name: Normalize file encoding (force UTF-8)
         run: |
-          find . -type f -name "*.php" -exec bash -c '
-            for f; do
-              if file -bi "$f" | grep -vq "charset=utf-8"; then
-                iconv -f ISO-8859-1 -t UTF-8 "$f" -o "$f.converted" && mv "$f.converted" "$f"
-              fi
-            done
+          find . -type f -name '*.php' -exec bash -c '
+          for f; do
+            if file -bi "$f" | grep -vq "charset=utf-8"; then
+              echo "Re-encoding $f"
+              iconv -f ISO-8859-1 -t UTF-8 "$f" -o "$f.utf8" && mv "$f.utf8" "$f"
+            fi
+          done
           ' bash {} +
 
-      - name: Run Psalm Static Analysis (SARIF)
+      - name: Run Psalm SARIF Analysis
         uses: psalm/psalm-github-actions@2.3.0
         with:
           security_analysis: true
@@ -49,19 +50,21 @@ jobs:
           report_file: results.sarif
           args: --output-format=sarif
 
-      - name: Run Psalm Static Analysis (JSON)
-        run: |
-          vendor/bin/psalm \
-            --output-format=json \
-            --taint-analysis \
-            --report=results.json || echo "::warning::Psalm exited with non-zero code, but continuing to upload JSON report."
+      - name: Run Psalm JSON Analysis
+        uses: psalm/psalm-github-actions@2.3.0
+        with:
+          security_analysis: true
+          show_info: false
+          composer_require_dev: true
+          report_file: results.json
+          args: --output-format=json
 
-      - name: Upload SARIF results to GitHub Code Scanning
+      - name: Upload SARIF to GitHub
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: results.sarif
 
-      - name: Upload JSON Report as Artifact
+      - name: Upload JSON as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: psalm-json-report
