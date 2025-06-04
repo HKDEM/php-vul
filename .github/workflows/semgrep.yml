@@ -30,12 +30,14 @@ jobs:
           semgrep --config=p/security-audit --json --output=semgrep-security-audit.json .
 
       # --- OWASP Top 10 Scan ---
-      - name: Run Semgrep Scan (OWASP Top 10, SARIF Output)
+      - name: Run Semgrep Scan (OWASP Top Ten, SARIF Output)
         run: |
-          semgrep --config=p/owasp-top10 --sarif --output=semgrep-owasp-top10.sarif .
-      - name: Run Semgrep Scan (OWASP Top 10, JSON Output)
+          semgrep --config="p/owasp-top-ten" --sarif --output=semgrep-owasp-top-ten.sarif .
+      
+      - name: Run Semgrep Scan (OWASP Top Ten, JSON Output)
         run: |
-          semgrep --config=p/owasp-top10 --json --output=semgrep-owasp-top10.json .
+          semgrep --config="p/owasp-top-ten" --json --output=semgrep-owasp-top-ten.json .
+
 
       # --- Upload additional SARIF results ---
       - name: Upload Security Audit SARIF results
@@ -45,14 +47,13 @@ jobs:
           category: semgrep-security-audit
         if: always()
 
-      - name: Upload OWASP Top 10 SARIF results
+      - name: Upload OWASP Top Ten SARIF results
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: semgrep-owasp-top10.sarif
-          category: semgrep-owasp-top10
+          sarif_file: semgrep-owasp-top-ten.sarif
+          category: semgrep-owasp-top-ten
         if: always()
-
-      # --- Upload all reports as artifact ---
+      
       - name: Upload all Semgrep Reports as Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -64,6 +65,7 @@ jobs:
             semgrep-secrets.json
             semgrep-security-audit.sarif
             semgrep-security-audit.json
-            semgrep-owasp-top10.sarif
-            semgrep-owasp-top10.json
+            semgrep-owasp-top-ten.sarif
+            semgrep-owasp-top-ten.json
         if: always()
+
