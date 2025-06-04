@@ -39,3 +39,11 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: psalm-results.sarif
+
+
+      - name: Upload Psalm JSON results
+        uses: actions/upload-artifact@v4
+        with:
+          name: psalm-json-report
+          path: psalm-results.json
+          if-no-files-found: ignore
