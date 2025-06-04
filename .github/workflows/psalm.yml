@@ -50,16 +50,19 @@ jobs:
           # We want to proceed with SARIF upload even if errors found (exit code 1)
           if [ $? -eq 2 ]; then exit 1; fi
 
-      - name: Upload SARIF results
+      - name: Run Psalm Scan (SARIF & JSON)
+        run: |
+          psalm --config=p/php --sarif --output=psalm-results.sarif
+          psalm --config=p/php --json --output=psalm-results.json
+
+      - name: Upload SARIF results (for GitHub Code Scanning)
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: psalm-results.sarif
-          checkout_path: ${{ github.workspace }}
 
-      - name: Upload full report as artifact
-        if: always()
+      - name: Upload psalm JSON Report
         uses: actions/upload-artifact@v4
         with:
-          name: psalm-security-report
-          path: psalm-results.sarif
-          retention-days: 7
+          name: psalm-json-report
+          path: psalm-results.json
+          if-no-files-found: ignore
