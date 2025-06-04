@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   semgrep-scan:
     runs-on: ubuntu-latest
@@ -25,23 +29,18 @@ jobs:
           python -m pip install semgrep
           semgrep --version
 
-      - name: Run Semgrep Scan (PHP + Secrets + Audit)
-        continue-on-error: true  # Continue even if findings exist
+      - name: Run Semgrep Scan (Comprehensive PHP + Secrets + Audit)
+        continue-on-error: true
         run: |
           semgrep --metrics=off \
             --config=p/php \
-            --config=p/oss-secrets \
+            --config=p/owasp-top10 \
+            --config=p/secrets \
             --config=p/security-audit \
             --sarif --output=semgrep-results.sarif \
             --json --output=semgrep-results.json
           
-          # Count findings for later use
           echo "FINDINGS_COUNT=$(jq '.results | length' semgrep-results.json)" >> $GITHUB_ENV
-
-      - name: Run Semgrep Scan (SARIF & JSON)
-        run: |
-          semgrep --config=p/php --sarif --output=semgrep-results.sarif
-          semgrep --config=p/php --json --output=semgrep-results.json
 
       - name: Upload SARIF results (for GitHub Code Scanning)
         uses: github/codeql-action/upload-sarif@v3
@@ -62,7 +61,6 @@ jobs:
             echo "::warning::Semgrep found ${{ env.FINDINGS_COUNT }} security issues"
           fi
 
-      # Optional: Fail only for high severity findings
       - name: Fail on critical findings
         if: ${{ env.FINDINGS_COUNT > 0 }}
         run: |
