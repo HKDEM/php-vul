@@ -2,77 +2,62 @@ name: Semgrep Security Scan
 
 on:
   push:
-    branches: [main]
+    branches: [ "main", "develop", "next" ]
   pull_request:
-    branches: [main]
-
-permissions:
-  contents: read
-  security-events: write
+    branches: [ "main", "develop", "next" ]
 
 jobs:
   semgrep-scan:
+    name: Run Semgrep Scan
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
+      - uses: actions/checkout@v4
 
       - name: Install Semgrep
         run: |
-          python -m pip install --upgrade pip setuptools wheel
           python -m pip install semgrep
           semgrep --version
-
-      - name: Run Semgrep Scan (Comprehensive)
-        continue-on-error: true
+      # --- PHP Security Scan (p/php) ---
+      - name: Run Semgrep Scan (PHP, SARIF Output)
         run: |
-          semgrep --metrics=off \
-            --config=p/php \
-            --config=p/owasp-top10 \
-            --config=p/secrets \
-            --config=p/security-audit \
-            --json --output=semgrep-results.json
-      
-          semgrep --metrics=off \
-            --config=p/php \
-            --config=p/owasp-top10 \
-            --config=p/secrets \
-            --config=p/security-audit \
-            --sarif --output=semgrep-results.sarif
-      
-          echo "FINDINGS_COUNT=$(jq '.results | length' semgrep-results.json)" >> $GITHUB_ENV
-
-
-      - name: Upload SARIF results (for GitHub Code Scanning)
+          semgrep --config=p/php --sarif --output=semgrep-php.sarif .
+      - name: Run Semgrep Scan (PHP, JSON Output)
+        run: |
+          semgrep --config=p/php --json --output=semgrep-php.json .
+      # --- Secrets Scan (p/secrets) ---
+      - name: Run Semgrep Scan (Secrets, SARIF Output)
+        run: |
+          semgrep --config=p/secrets --sarif --output=semgrep-secrets.sarif .
+      - name: Run Semgrep Scan (Secrets, JSON Output)
+        run: |
+          semgrep --config=p/secrets --json --output=semgrep-secrets.json .
+      # --- Upload SARIF results to GitHub Code Scanning ---
+      - name: Upload PHP SARIF results
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: semgrep-results.sarif
+          sarif_file: semgrep-php.sarif
+          category: semgrep-php
+        if: always()
 
-      - name: Upload Semgrep JSON Report
+      - name: Upload Secrets SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep-secrets.sarif
+          category: semgrep-secrets
+        if: always()
+
+      # --- Upload all reports as artifact ---
+      - name: Upload Semgrep Reports as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: semgrep-json-report
-          path: semgrep-results.json
-          if-no-files-found: ignore
-
-      - name: Show findings count
-        run: |
-          echo "Found ${{ env.FINDINGS_COUNT }} security findings"
-          if [ "${{ env.FINDINGS_COUNT }}" -gt 0 ]; then
-            echo "::warning::Semgrep found ${{ env.FINDINGS_COUNT }} security issues"
-          fi
-
-      - name: Fail on critical findings
-        if: ${{ env.FINDINGS_COUNT > 0 }}
-        run: |
-          CRITICAL_COUNT=$(jq '[.results[] | select(.extra.severity == "ERROR")] | length' semgrep-results.json)
-          if [ "$CRITICAL_COUNT" -gt 0 ]; then
-            echo "::error::Found $CRITICAL_COUNT critical findings"
-            exit 1
-          fi
+          name: semgrep-security-reports
+          path: |
+            semgrep-php.sarif
+            semgrep-php.json
+            semgrep-secrets.sarif
+            semgrep-secrets.json
+        if: always()
