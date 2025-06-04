@@ -3,10 +3,10 @@ name: Psalm Security Scan (SARIF & JSON Reports)
 on:
   push:
     branches:
-      - next
+      - main
   pull_request:
     branches:
-      - next
+      - main
   schedule:
     - cron: '16 22 * * 1'
 
