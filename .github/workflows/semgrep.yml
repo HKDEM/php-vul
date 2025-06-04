@@ -29,7 +29,7 @@ jobs:
           python -m pip install semgrep
           semgrep --version
 
-      - name: Run Semgrep Scan (Comprehensive PHP + Secrets + Audit)
+      - name: Run Semgrep Scan (Comprehensive)
         continue-on-error: true
         run: |
           semgrep --metrics=off \
@@ -37,10 +37,17 @@ jobs:
             --config=p/owasp-top10 \
             --config=p/secrets \
             --config=p/security-audit \
-            --sarif --output=semgrep-results.sarif \
             --json --output=semgrep-results.json
-          
+      
+          semgrep --metrics=off \
+            --config=p/php \
+            --config=p/owasp-top10 \
+            --config=p/secrets \
+            --config=p/security-audit \
+            --sarif --output=semgrep-results.sarif
+      
           echo "FINDINGS_COUNT=$(jq '.results | length' semgrep-results.json)" >> $GITHUB_ENV
+
 
       - name: Upload SARIF results (for GitHub Code Scanning)
         uses: github/codeql-action/upload-sarif@v3
