@@ -18,11 +18,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Run PHPStan (with SARIF output)
-        uses: php-actions/phpstan@v3
-        with:
-          path: src
-          args: --error-format=sarif > phpstan-results.sarif
+      - name: Download PHPStan
+        run: |
+          wget https://github.com/phpstan/phpstan/releases/latest/download/phpstan.phar
+          chmod +x phpstan.phar
+          mkdir -p tools
+          mv phpstan.phar tools/phpstan
+
+      - name: Run PHPStan manually
+        run: |
+          ./tools/phpstan analyse src/ --error-format=sarif > phpstan-results.sarif
 
       - name: Upload SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v2
