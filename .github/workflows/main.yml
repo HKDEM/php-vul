@@ -18,16 +18,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Download PHPStan
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      - name: Set up PHPStan and GitHub extension (no Composer global)
         run: |
+          mkdir -p tools/phpstan
+          cd tools/phpstan
+          
+          # Download phpstan.phar
           wget https://github.com/phpstan/phpstan/releases/latest/download/phpstan.phar
           chmod +x phpstan.phar
-          mkdir -p tools
-          mv phpstan.phar tools/phpstan
 
-      - name: Run PHPStan manually
+          # Init composer locally & require the GitHub formatter
+          composer init -n
+          composer require --dev phpstan/phpstan-github
+
+          cd ../..
+
+      - name: Run PHPStan with GitHub SARIF formatter
         run: |
-          ./tools/phpstan analyse src/ --error-format=sarif > phpstan-results.sarif
+          ./tools/phpstan/phpstan/phpstan.phar analyse src \
+            --error-format=github > phpstan-results.sarif
+        env:
+          COMPOSER_PROCESS_TIMEOUT: 0
 
       - name: Upload SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v2
