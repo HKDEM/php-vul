@@ -2,11 +2,9 @@ name: PHPStan
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: read
@@ -20,19 +18,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+      - name: Run PHPStan (with SARIF output)
+        uses: php-actions/phpstan@v3
         with:
-          php-version: '8.1'
-          extensions: mbstring, xml
+          path: src
+          args: --error-format=sarif > phpstan-results.sarif
 
-      - name: Install dependencies
-        run: composer install --no-progress --prefer-dist
-
-      - name: Run PHPStan
-        run: vendor/bin/phpstan analyse --error-format=sarif > phpstan-results.sarif
-
-      - name: Upload SARIF to GitHub
+      - name: Upload SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: phpstan-results.sarif
