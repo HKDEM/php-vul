@@ -2,11 +2,10 @@ name: PHPStan
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
+
 
 permissions:
   contents: read
@@ -20,19 +19,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+      - name: Run PHPStan (GitHub Action)
+        uses: php-actions/phpstan@v3
         with:
-          php-version: '8.1'
-          extensions: mbstring, xml
-
-      - name: Install dependencies
-        run: composer install --no-progress --prefer-dist
-
-      - name: Run PHPStan
-        run: vendor/bin/phpstan analyse --error-format=sarif > phpstan-results.sarif
+          path: src
+          level: 5
+          error_format: sarif
+          memory_limit: 512M
 
       - name: Upload SARIF to GitHub
         uses: github/codeql-action/upload-sarif@v2
         with:
-          sarif_file: phpstan-results.sarif
+          sarif_file: phpstan.sarif
