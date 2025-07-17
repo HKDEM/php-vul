@@ -16,16 +16,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Run PHPStan (GitHub Action)
+      - name: Download PHPStan
+        run: |
+          wget https://github.com/phpstan/phpstan/releases/latest/download/phpstan.phar
+          chmod +x phpstan.phar
+          mkdir -p tools
+          mv phpstan.phar tools/phpstan
+      
+      - name: Run PHPStan via Action
         uses: php-actions/phpstan@v3
         with:
-          path: src
-          level: 5
-          error_format: sarif
-          memory_limit: 512M
+          phpstan_path: tools/phpstan
+          path: src/
+
 
       - name: Upload SARIF to GitHub
         uses: github/codeql-action/upload-sarif@v2
